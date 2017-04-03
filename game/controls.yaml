@@ -1,0 +1,5 @@
+default:
+   up: K_UP
+   down: K_DOWN
+   left: K_LEFT
+   right: K_RIGHT        
