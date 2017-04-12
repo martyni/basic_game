@@ -2,13 +2,14 @@ import pygame
 from base import Base
 from pygame.locals import *
 from colours import *
-from game_object import Main_Player, Enemy, Block, Block_group, Tree
+from game_object import Main_Player, Enemy, Block, Block_group, Tree, Cursor
 
 class mygame(Base):
    def __init__(self, width=1280 , height=800):
       self.pygame = pygame
       self.__name__ = "mygame"
       self.pygame.init()
+      self.pygame.font.init()
       self.width = width
       self.height = height
       self.window = self.pygame.display.set_mode( (width, height),HWSURFACE|DOUBLEBUF|RESIZABLE) 
@@ -42,13 +43,15 @@ class mygame(Base):
 
    def main(self):
       self.default_sprites = Block_group()
-      self.sprite = Main_Player(RED, 48, 48, self.default_sprites, self.window, self.pygame.display, self.pygame)
-      self.sprite.main_player()
+      self.sprite = Main_Player(RED, 48, 48, self.default_sprites, self.window, self.pygame.display, self.pygame, 500, 700)
+      #self.sprite.main_player()
       self.sprite2 = Enemy(BLUE, 48, 48, self.default_sprites, self.window, self.pygame.display, self.pygame)
-      self.sprite3 = Tree(BLUE, 48, 48, self.default_sprites, self.window, self.pygame.display, self.pygame)
+      self.sprite3 = Tree(BLUE, 48, 48, self.default_sprites, self.window, self.pygame.display, self.pygame, 500, 600)
+      self.sprite4 = Cursor(BLUE, 16, 16, self.default_sprites, self.window, self.pygame.display, self.pygame)
       print '{} <--'.format(self.default_sprites)
       print "hi"
-      for sprite in self.sprite, self.sprite2, self.sprite3:
+      pygame.mouse.set_visible(0)
+      for sprite in self.sprite, self.sprite2, self.sprite3, self.sprite4:
          self.default_sprites.add(sprite)
       while self.running:
          self.window.fill(GREEN)
@@ -66,6 +69,7 @@ class mygame(Base):
 def main():
    m = mygame()
    m.main()
+   
    
 if __name__ == "__main__":
    main()

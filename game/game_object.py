@@ -1,53 +1,61 @@
 import pygame
 from base import Base
-from random import randint
+from random import randint, choice
 from copy import deepcopy
 from pygame import gfxdraw
 black = (0,0,0)
 white = (255, 255,255)
 
 class Block(pygame.sprite.Sprite, Base):
+    matrix = [[1]]
+    animation_array = [[0]]
 
-    matrix = [ 
-           [None, None,1,1,1,1,1,None],
-           [None,1,0,0,0,0,0,1],
-           [None,1,0,1,0,1,0,1],
-           [None,None,1,1,1,1,1,None],
-           [None,1,0,0,0,0,1,None],
-           [None,1,1,0,0,1,None,1],
-           [None,None,1,1,1,1,None,None],
-           [None,1,None, None, None,1,None,None],
-    ]
-    animation_array = [
-               [None, None,1,1,1,1,1,None],
-               [None,1,0,0,0,0,0,1],
-               [None,1,0,1,0,1,0,1],
-               [None,None,1,1,1,1,1,None],
-               [None,1,0,0,0,0,1,None],
-               [1,None,1,0,0,1,1,None],
-               [None,None,1,1,1,1,None,None],
-               [None,None,1, None, None,None,1,None],
-        ]
     # Constructor. Pass in the color of the block,
     # and its x and y position
     def message(self, message):
         self.log(self.__name__, message)
 
-    def __init__(self, color, width, height, group=None, window=None, display=None, pygame=pygame):
+    def in_game_message(self, message):
+        text_sur = self.font.render(str(message), 
+                True,
+                (0, 0, 0, 100),
+                (255, 255, 255, 10)
+                )
+        self.window.blit(text_sur, 
+                [self.rect.x + self.width, self.rect.y - self.height/2]
+                    )
+
+    def __init__(self, color, width, height, group=None, window=None, display=None, pygame=pygame, start_x=0, start_y=0):
        self.__name__ = "Block"
        self.width = width
        self.height = height
+       self.start_x = start_x
+       self.start_y = start_y
        self.frame = 0
        self.countdown = 0
        self.animation_speed = 3
+       self.step_size = 4
        self.window = window
        self.display = display
        self.old_position = None
        # Call the parent class (Sprite) constructor
        self.pygame = pygame
+       #self.pygame.font.init()
+       self.font1 = self.pygame.font.Font('fonts/AlumFreePromotional.ttf', self.height)
+       self.font2 = self.pygame.font.Font('fonts/AlumFreePromotional2.ttf', self.height)
+       self.fonts = [self.font1,self.font2]
+       self.font = self.fonts[0]
        self.pygame.sprite.Sprite.__init__(self)
        self.draw_self()
-
+       self.directions = {
+            "up": self.move_up,
+            "down": self.move_down,       
+            "left": self.move_left,
+            "right": self.move_right,
+            "none": self.move_none
+       }
+       self.rect.x = self.start_x
+       self.rect.y = self.start_y
        if group is not None:
            self.group = group
        else:
@@ -58,16 +66,40 @@ class Block(pygame.sprite.Sprite, Base):
        # This could also be an image loaded from the disk.
        self.add(self.group)
 
+    def move_up(self):
+        self.rect.y -= self.step_size
+      
+    def move_down(self):
+        self.rect.y += self.step_size
+
+    def move_right(self):
+        self.rect.x += self.step_size
+
+    def move_left(self):
+        self.rect.x -= self.step_size
+
+    def move_none(self):
+        pass
+
+    def move_randomly(self):
+        if not self.countdown:
+           self.next_move = choice([i for i in self.directions.iterkeys()] + ["none"] * 5)
+           self.countdown = self.line_of_site/10
+        self.directions[self.next_move]()
+        self.in_game_message(self.next_move)
+        self.countdown -= 1
+    '''
     def move_randomly(self):
         if not self.countdown: 
            self.randx = randint(-1,1)
            self.randy = randint(-1,1)
            self.countdown = self.line_of_site/10
+           self.in_game_message("moving x: {} y: {}".format(self.randx, self.randy))
         self.check_limits()
         self.rect.y += self.randy
         self.rect.x += self.randx
         self.countdown -= 1
-   
+    '''
     def check_limits(self):
         if self.rect.x < 0:
             self.randx = 1
@@ -88,6 +120,7 @@ class Block(pygame.sprite.Sprite, Base):
        # Fetch the rectangle object that has the dimensions of the image
        # Update the position of this object by setting the values of rect.x and rect.y
        self.rect = self.image.get_rect()
+       
 
     def draw_matrix(self, surface, matrix):
        for y in range(len(matrix)):
@@ -108,7 +141,9 @@ class Block(pygame.sprite.Sprite, Base):
        if not self.frame % self.animation_speed:
           if self.image == self.animations[0]:
              self.image = self.animations[1]
+             self.font = self.fonts[1]
           elif self.image == self.animations[1]:
+             self.font = self.fonts[0]
              self.image = self.animations[0] 
        self.frame += 1
 
@@ -148,43 +183,83 @@ class Main_Player(Block):
        global target_x
 
        global target_y
-       target_x, target_y = self.rect.x, self.rect.y = self.pygame.mouse.get_pos() 
+       x, y = self.pygame.mouse.get_pos()
+       x -= x % self.step_size
+       y -= y % self.step_size
+       if y > self.rect.y:
+           #self.rect.y += self.step_size
+           self.move_down()
+       elif y < self.rect.y:
+           self.move_up()
+           #self.rect.y -= self.step_size
+       if x > self.rect.x:
+           self.move_right()
+           #self.rect.x += self.step_size
+       elif x < self.rect.x:
+           self.move_left()
+           #self.rect.x -= self.step_size
+       target_x, target_y = self.rect.x, self.rect.y 
        self.check_position()
 
     def draw_self(self): 
        self.stand = self.pygame.image.load("base.png")
+       self.stand = self.pygame.transform.rotozoom(self.stand, 2, 2)
        self.animation = self.pygame.image.load("base.png")
+       self.animation = self.pygame.transform.rotozoom(self.animation, -2, 2)
        self.animations = [self.stand, self.animation]
        self.image = self.animations[0]
        self.rect = self.image.get_rect()
-
-    def main_player(self):
-       self.matrix = deepcopy(self.matrix)
-       self.animation_array = deepcopy(self.animation_array)
-       for matrix in (self.matrix, self.animation_array):
-          matrix[0][-1] = 1
-          matrix[0][1] = 1
        
-       self.draw_self() 
+       
+
+
+class Cursor(Block):
+    matrix = [
+            [None, 1, None],
+            [1, 1, 1],
+            [None, 1, None],
+            ]
+    animation = [
+            [1, 1, 1],
+            [1, None, 1],
+            [1, 1, 1],
+            ]
+    def update(self):
+        self.rect.x, self.rect.y = self.pygame.mouse.get_pos()
 
 class Enemy(Block):
    line_of_site = 300
+   matrix = [ 
+          [None, None,1,1,1,1,1,None],
+          [None,1,0,0,0,0,0,1],
+          [None,1,0,1,0,1,0,1],
+          [None,None,1,1,1,1,1,None],
+          [None,1,0,0,0,0,1,None],
+          [None,1,1,0,0,1,None,1],
+          [None,None,1,1,1,1,None,None],
+          [None,1,None, None, None,1,None,None],
+   ]
+   animation_array = [
+              [None, None,1,1,1,1,1,None],
+              [None,1,0,0,0,0,0,1],
+              [None,1,0,1,0,1,0,1],
+              [None,None,1,1,1,1,1,None],
+              [None,1,0,0,0,0,1,None],
+              [1,None,1,0,0,1,1,None],
+              [None,None,1,1,1,1,None,None],
+              [None,None,1, None, None,None,1,None],
+       ]
    def update(self):
       self.check_position()
       self.step_size = 1
-      for sprite in self.group:
+      for sprite in self.group: 
          if self.check_collision(sprite):
             if sprite != self:
-               self.message(str((sprite.rect.x, sprite.rect.y)))
+               self.in_game_message((sprite.rect.x, sprite.rect.y))
                top_left_x = sprite.rect.x if sprite.rect.x > self.rect.x else self.rect.x 
                top_left_y = sprite.rect.y if sprite.rect.y > self.rect.y else self.rect.y
                bottom_right_x  = self.rect.bottomright[0] if self.rect.bottomright[0] < sprite.rect.bottomright[0] else sprite.rect.bottomright[0]
                bottom_right_y  = self.rect.bottomright[1] if self.rect.bottomright[1] < sprite.rect.bottomright[1] else sprite.rect.bottomright[1]
-              # self.pygame.draw.rect(self.window, 
-              #    (255,0,0,50),
-              #    #self.pygame.Rect(sprite.rect.x, sprite.rect.y, self.rect.bottomright[0] - sprite.rect.x, self.rect.bottomright[1] - sprite.rect.y),
-              #    self.pygame.Rect(top_left_x, top_left_y, bottom_right_x - top_left_x, bottom_right_y - top_left_y),
-              #    )
                self.pygame.gfxdraw.box(self.window,
                        self.pygame.Rect(top_left_x, top_left_y, bottom_right_x - top_left_x, bottom_right_y - top_left_y),
                        (255,0,0,50)
@@ -194,13 +269,20 @@ class Enemy(Block):
                self.move_randomly()
                break
             if target_y > self.rect.y:
-                self.rect.y += self.step_size
+                self.move_down()
+                #self.rect.y += self.step_size
             elif target_y < self.rect.y:
-                self.rect.y -= self.step_size
+                #self.rect.y -= self.step_size
+                self.move_up()
             if target_x > self.rect.x:
-                self.rect.x += self.step_size
+                self.move_right()
+                #self.rect.x += self.step_size
             elif target_x < self.rect.x:
-                self.rect.x -= self.step_size
+                self.move_left()
+                #self.rect.x -= self.step_size
+
+            self.in_game_message("I'll kill you!!")
+
 
 
 class Tree(Block):
